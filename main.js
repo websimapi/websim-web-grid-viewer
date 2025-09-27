@@ -1,5 +1,3 @@
-import * as CryptoJS from 'crypto-js/md5';
-
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const loginView = document.getElementById('login-view');
