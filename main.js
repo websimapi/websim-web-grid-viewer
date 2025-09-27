@@ -1,4 +1,7 @@
+import md5 from 'crypto-js/md5';
+
 document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM Elements ---
     const loginView = document.getElementById('login-view');
     const appView = document.getElementById('app-view');
     const loginForm = document.getElementById('login-form');
@@ -6,9 +9,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginStatus = document.getElementById('login-status');
     const gridSelect = document.getElementById('grid-select');
     const customGridUrlContainer = document.getElementById('custom-grid-url-container');
-    
+    const customGridUrlInput = document.getElementById('custom-grid-url');
     const welcomeMessage = document.getElementById('welcome-message');
     const logoutButton = document.getElementById('logout-button');
+
+    // --- Grid Info ---
+    const GRIDS = {
+        agni: 'https://login.agni.lindenlab.com/cgi-bin/login.cgi',
+        aditi: 'https://login.aditi.lindenlab.com/cgi-bin/login.cgi',
+    };
+    const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+
+    // --- App State ---
+    let sessionInfo = {};
+
+    // --- UI Event Listeners ---
 
     // Show/hide custom grid URL input based on selection
     gridSelect.addEventListener('change', () => {
@@ -20,45 +35,139 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Handle login form submission
-    loginForm.addEventListener('submit', (event) => {
+    loginForm.addEventListener('submit', async (event) => {
         event.preventDefault();
-        
-        const firstName = document.getElementById('first-name').value;
-        const lastName = document.getElementById('last-name').value;
+
+        const firstName = document.getElementById('first-name').value.trim();
+        const lastName = document.getElementById('last-name').value.trim();
         const password = document.getElementById('password').value;
+        const grid = gridSelect.value;
 
         // Basic validation
         if (!firstName || !lastName || !password) {
-            loginStatus.textContent = 'All fields are required.';
-            loginStatus.classList.add('error');
+            showError('All fields are required.');
             return;
         }
 
-        loginStatus.textContent = 'Logging in...';
+        let loginUrl = GRIDS[grid];
+        if (grid === 'custom') {
+            loginUrl = customGridUrlInput.value.trim();
+            if (!loginUrl) {
+                showError('Custom grid URL is required.');
+                return;
+            }
+        }
+
+        loginStatus.textContent = `Connecting to ${gridSelect.options[gridSelect.selectedIndex].text}...`;
         loginStatus.classList.remove('error');
         loginButton.disabled = true;
 
-        // Simulate network request
-        setTimeout(() => {
-            // On successful "login"
+        try {
+            const result = await performLogin(firstName, lastName, password, loginUrl);
+            sessionInfo = {
+                firstName,
+                lastName,
+                ...result
+            };
+            
+            // On successful login
             loginView.classList.remove('active');
             appView.classList.add('active');
-            
             welcomeMessage.textContent = `Welcome, ${firstName} ${lastName}`;
-
-            // Reset login form for next time
+            
+            // Reset login form
             loginForm.reset();
-            loginButton.disabled = false;
-            loginStatus.textContent = '';
             customGridUrlContainer.classList.add('hidden');
 
-        }, 2000);
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            loginButton.disabled = false;
+            if (!appView.classList.contains('active')) {
+                loginStatus.textContent = '';
+            }
+        }
     });
-    
+
     // Handle logout
     logoutButton.addEventListener('click', () => {
+        sessionInfo = {};
         appView.classList.remove('active');
         loginView.classList.add('active');
     });
-});
 
+    // --- Helper Functions ---
+
+    function showError(message) {
+        loginStatus.textContent = message;
+        loginStatus.classList.add('error');
+    }
+
+    /**
+     * Performs the XML-RPC login to a grid.
+     */
+    async function performLogin(firstName, lastName, password, loginUrl) {
+        const passwordHash = '$1$' + md5(password).toString();
+        const xmlBody = `<?xml version="1.0"?>
+<methodCall>
+  <methodName>login_to_simulator</methodName>
+  <params>
+    <param>
+      <value>
+        <struct>
+          <member><name>firstname</name><value><string>${firstName}</string></value></member>
+          <member><name>lastname</name><value><string>${lastName}</string></value></member>
+          <member><name>passwd</name><value><string>${passwordHash}</string></value></member>
+          <member><name>start</name><value><string>last</string></value></member>
+          <member><name>version</name><value><string>Web Grid Viewer 1.0</string></value></member>
+          <member><name>platform</name><value><string>web</string></value></member>
+          <member><name>mac</name><value><string>00:00:00:00:00:00</string></value></member>
+          <member><name>id0</name><value><string>00:00:00:00:00:00</string></value></member>
+        </struct>
+      </value>
+    </param>
+  </params>
+</methodCall>`;
+
+        const proxiedUrl = `${CORS_PROXY}${encodeURIComponent(loginUrl)}`;
+
+        const response = await fetch(proxiedUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/xml' },
+            body: xmlBody,
+        });
+
+        if (!response.ok) {
+            throw new Error(`Network error: ${response.status} ${response.statusText}`);
+        }
+
+        const responseText = await response.text();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(responseText, "application/xml");
+
+        // Simple XML parsing helper
+        const getVal = (name) => {
+            const members = xmlDoc.getElementsByTagName('member');
+            for (const member of members) {
+                if (member.getElementsByTagName('name')[0]?.textContent === name) {
+                    return member.getElementsByTagName('value')[0]?.firstElementChild?.textContent;
+                }
+            }
+            return null;
+        };
+
+        if (getVal('login') !== 'true') {
+            const reason = getVal('reason') || 'Unknown reason';
+            const message = getVal('message') || 'Login failed.';
+            console.error('Login Failed:', { reason, message, response: responseText });
+            throw new Error(message);
+        }
+
+        return {
+            agentId: getVal('agent_id'),
+            sessionId: getVal('session_id'),
+            secureSessionId: getVal('secure_session_id'),
+            // ... extract other useful data as needed
+        };
+    }
+});
