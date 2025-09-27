@@ -1,4 +1,4 @@
-import md5 from 'crypto-js/md5';
+import * as CryptoJS from 'crypto-js/md5';
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * Performs the XML-RPC login to a grid.
      */
     async function performLogin(firstName, lastName, password, loginUrl) {
-        const passwordHash = '$1$' + md5(password).toString();
+        const passwordHash = '$1$' + CryptoJS.MD5(password).toString();
         const xmlBody = `<?xml version="1.0"?>
 <methodCall>
   <methodName>login_to_simulator</methodName>
