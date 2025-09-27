@@ -1,0 +1,199 @@
+:root {
+    --bg-color: #121212;
+    --surface-color: #1e1e1e;
+    --primary-color: #03dac6;
+    --primary-variant-color: #3700b3;
+    --on-surface-color: #e0e0e0;
+    --on-surface-light-color: #a0a0a0;
+    --error-color: #cf6679;
+    --font-family: 'Roboto', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+    font-family: var(--font-family);
+    color: var(--on-surface-color);
+    background-color: var(--bg-color);
+}
+
+body {
+    background-image: url('background.png');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+#app-container {
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(10px) brightness(0.5);
+    -webkit-backdrop-filter: blur(10px) brightness(0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+}
+
+.view {
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+.view.active {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Login View */
+.login-box {
+    background-color: rgba(30, 30, 30, 0.85);
+    padding: 2.5rem 2rem;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.login-box h1 {
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.login-box .subtitle {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: var(--on-surface-light-color);
+    font-weight: 300;
+}
+
+#login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.input-group {
+    display: flex;
+    gap: 1rem;
+}
+
+.input-group input {
+    width: 50%;
+}
+
+input, select {
+    width: 100%;
+    padding: 0.9rem;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: var(--on-surface-color);
+    font-size: 1rem;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+input::placeholder {
+    color: var(--on-surface-light-color);
+}
+
+button {
+    padding: 0.9rem;
+    border: none;
+    border-radius: 6px;
+    background-color: var(--primary-color);
+    color: #000;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+button:hover {
+    background-color: #01bfa9;
+}
+
+button:disabled {
+    background-color: #555;
+    cursor: not-allowed;
+}
+
+.hidden {
+    display: none;
+}
+
+.status-message {
+    text-align: center;
+    min-height: 24px;
+    font-weight: 300;
+}
+
+.status-message.error {
+    color: var(--error-color);
+}
+
+/* App View */
+#app-view {
+    max-width: 1200px;
+    height: 100%;
+    max-height: 90vh;
+    background-color: rgba(30, 30, 30, 0.85);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#app-view header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#logout-button {
+    background-color: transparent;
+    border: 1px solid var(--on-surface-light-color);
+    color: var(--on-surface-light-color);
+    padding: 0.5rem 1rem;
+    font-weight: 400;
+}
+
+#logout-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.app-main {
+    padding: 1.5rem;
+}
+
+.placeholder-content {
+    text-align: center;
+    padding: 4rem 1rem;
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+}
+
+.placeholder-content h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+

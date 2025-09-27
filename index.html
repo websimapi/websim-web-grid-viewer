@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Grid Viewer</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <script type="importmap">
+    {
+        "imports": {}
+    }
+    </script>
+</head>
+<body>
+    <div id="app-container">
+        <!-- LOGIN VIEW -->
+        <div id="login-view" class="view active">
+            <div class="login-box">
+                <h1>Web Grid Viewer</h1>
+                <p class="subtitle">Log in to Second Life & OpenSim</p>
+                <form id="login-form">
+                    <div class="input-group">
+                        <input type="text" id="first-name" placeholder="First Name" required>
+                        <input type="text" id="last-name" placeholder="Last Name" required>
+                    </div>
+                    <input type="password" id="password" placeholder="Password" required>
+                    <select id="grid-select">
+                        <option value="agni">Second Life (Agni)</option>
+                        <option value="aditi">Second Life (Aditi)</option>
+                        <option value="custom">Custom Grid</option>
+                    </select>
+                    <div id="custom-grid-url-container" class="hidden">
+                        <input type="url" id="custom-grid-url" placeholder="http://grid.example.com:8002/">
+                    </div>
+                    <button type="submit" id="login-button">Login</button>
+                    <div id="login-status" class="status-message"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- APP VIEW (after login) -->
+        <div id="app-view" class="view">
+            <header>
+                <h2 id="welcome-message"></h2>
+                <button id="logout-button">Logout</button>
+            </header>
+            <main class="app-main">
+                <div class="placeholder-content">
+                    <h3>Welcome!</h3>
+                    <p>3D world rendering is not yet implemented.</p>
+                    <p>This is the starting point for your web-based viewer. Future features will appear here.</p>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script type="module" src="main.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+
