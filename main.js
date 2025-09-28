@@ -171,15 +171,32 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         if (getVal('login') !== 'true') {
-            const reason = getVal('reason') || 'Unknown reason';
-            const message = getVal('message') || 'Login failed.';
+            const rawReason = getVal('reason');
+            const rawMessage = getVal('message');
+
+            const message = rawMessage?.trim() || 'Login failed.';
+            const reason = rawReason?.trim() || null;
+
             console.error('Login Failed:', { reason, message, rawResponse: responseText });
 
-            // Create a more informative error message for the user.
             let userMessage = message;
-            if (reason !== 'Unknown reason' && !message.toLowerCase().includes(reason.toLowerCase())) {
-                userMessage += ` (Reason: ${reason})`;
+
+            if (reason) {
+                // Sanitize reason for display (e.g., 'bad_password' -> 'bad password')
+                const displayReason = reason.replace(/_/g, ' ');
+
+                // Check if the message already incorporates the reason/error type.
+                if (!message.toLowerCase().includes(reason.toLowerCase()) && !message.toLowerCase().includes(displayReason.toLowerCase())) {
+                    // If the provided message is generic, use the reason directly.
+                    if (message === 'Login failed.') {
+                        userMessage = `Login failed: ${displayReason}`;
+                    } else {
+                        // Otherwise, append the technical code/reason.
+                        userMessage += ` (Code: ${displayReason})`;
+                    }
+                }
             }
+            
             throw new Error(userMessage);
         }
 

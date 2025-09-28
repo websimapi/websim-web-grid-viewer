@@ -19,15 +19,10 @@
                 <p class="subtitle">Log in to Second Life & OpenSim</p>
                 <form id="login-form">
                     <div class="input-group">
-                        <input type="text" id="first-name" placeholder="Username or First Name" required>
-                        <input type="text" id="last-name" placeholder="Last Name (Optional)">
+                        <input type="text" id="first-name" placeholder="First Name" required>
+                        <input type="text" id="last-name" placeholder="Last Name" required>
                     </div>
-                    <div class="password-container">
-                        <input type="password" id="password" placeholder="Password" required>
-                        <button type="button" id="toggle-password" aria-label="Show password">
-                            👁️
-                        </button>
-                    </div>
+                    <input type="password" id="password" placeholder="Password" required>
                     <select id="grid-select">
                         <option value="agni">Second Life (Agni)</option>
                         <option value="aditi">Second Life (Aditi)</option>
@@ -35,9 +30,6 @@
                     </select>
                     <div id="custom-grid-url-container" class="hidden">
                         <input type="url" id="custom-grid-url" placeholder="http://grid.example.com:8002/">
-                    </div>
-                    <div id="grid-status-container" class="status-message">
-                        <span id="current-grid-status">Checking grid status...</span>
                     </div>
                     <button type="submit" id="login-button">Login</button>
                     <div id="login-status" class="status-message"></div>
@@ -66,7 +58,6 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
-    <script type="module" src="xmlrpc.js"></script>
     <script type="module" src="main.js"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
