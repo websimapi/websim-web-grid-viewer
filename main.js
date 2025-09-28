@@ -296,7 +296,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const members = xmlDoc.getElementsByTagName('member');
             for (const member of members) {
                 if (member.getElementsByTagName('name')[0]?.textContent === name) {
-                    return member.getElementsByTagName('value')[0]?.firstElementChild?.textContent;
+                    const valueElement = member.getElementsByTagName('value')[0];
+                    if (valueElement) {
+                        // Standard XML-RPC dictates a single type element (e.g., <string>, <int>) inside <value>
+                        const typedElement = valueElement.firstElementChild;
+                        if (typedElement) {
+                            return typedElement.textContent;
+                        }
+                        // Fallback: If no typed element, grab text content of <value> itself (non-standard but robust for simple strings)
+                        return valueElement.textContent.trim();
+                    }
                 }
             }
             return null;
@@ -322,7 +331,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 userMessage = `Login failed: ${displayReason}`;
             } else {
                 // Fallback for unexpected failures where login is not true but no reason/message is provided
-                 userMessage = 'Login failed: The server rejected the request with no specific reason provided by the grid.';
+                 // Provide a more actionable message focusing on common user errors (credentials/grid status).
+                 userMessage = 'Login failed. Please verify your username, password, and grid selection. If credentials are correct, the grid server may be experiencing issues.';
             }
             
             throw new Error(userMessage);
