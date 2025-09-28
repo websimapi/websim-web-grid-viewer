@@ -294,8 +294,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (xmlDoc.getElementsByTagName('fault').length > 0) {
             let faultString = xmlDoc.getElementsByTagName('faultString')[0]?.textContent;
             
+            const rawResponseSnippet = responseText.substring(0, 500).replace(/\s+/g, ' ').trim();
+
             console.error('XML-RPC Fault received:', { faultString });
-            throw new Error(`Login failed (XML-RPC Fault): ${faultString || 'Unknown server fault.'}`);
+            // New: Include raw response in error message for better debugging
+            throw new Error(`Login failed (XML-RPC Fault): ${faultString || 'Unknown server fault.'} Raw Response Start: [${rawResponseSnippet}...]`);
         }
 
 
@@ -319,12 +322,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return null;
         };
 
-        if (getVal('login') !== 'true') {
+        const loginStatusValue = getVal('login');
+
+        if (loginStatusValue !== 'true') {
             const rawReason = getVal('reason');
             const rawMessage = getVal('message');
 
             const message = rawMessage?.trim();
             const reason = rawReason?.trim();
+            
+            // Get a snippet of the raw response text for verbose debugging
+            const rawResponseSnippet = responseText.substring(0, 500).replace(/\s+/g, ' ').trim();
+
 
             console.error('Login Failed (Protocol Error):', { reason, message, rawResponse: responseText });
 
@@ -342,6 +351,9 @@ document.addEventListener('DOMContentLoaded', () => {
                  // Provide a more actionable message focusing on common user errors (credentials/grid status).
                  userMessage = 'Login failed. Please verify your username, password, and grid selection. If credentials are correct, the grid server may be experiencing issues.';
             }
+            
+            // Append verbose debugging information requested by the user
+            userMessage += ` [Protocol Status: ${loginStatusValue}. Raw Start: ${rawResponseSnippet}...]`;
             
             throw new Error(userMessage);
         }
