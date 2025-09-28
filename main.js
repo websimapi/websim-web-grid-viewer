@@ -239,11 +239,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Standard Second Life/OpenSim login hashing: MD5 hash prefixed with $1$
         const passwordHash = '$1$' + CryptoJS.MD5(password).toString();
         
-        const agentName = lastName ? `${firstName} ${lastName}` : firstName;
-        console.log(`Attempting login for ${agentName} to ${loginUrl}`);
+        // Use 'Resident' as the last name if the user left it blank, for maximum compatibility 
+        // with grids expecting a two-part name structure, while still supporting single-name logins.
+        const effectiveLastName = lastName || 'Resident';
 
-        // Note: Login logic verified to use standard XML-RPC login_to_simulator
-        // endpoint structure, including mandatory parameters and handling optional last name.
+        const agentName = lastName ? `${firstName} ${lastName}` : firstName;
+        console.log(`Attempting login for ${agentName} to ${loginUrl} using effective last name: ${effectiveLastName}`);
+
+        // Included additional standard parameters (channel, client_digest, agree_to_tos) 
+        // to ensure a proper and robust login handshake recognized by various grids.
         const xmlBody = `<?xml version="1.0"?>
 <methodCall>
   <methodName>login_to_simulator</methodName>
@@ -252,13 +256,17 @@ document.addEventListener('DOMContentLoaded', () => {
       <value>
         <struct>
           <member><name>firstname</name><value><string>${firstName}</string></value></member>
-          <member><name>lastname</name><value><string>${lastName}</string></value></member>
+          <member><name>lastname</name><value><string>${effectiveLastName}</string></value></member>
           <member><name>passwd</name><value><string>${passwordHash}</string></value></member>
           <member><name>start</name><value><string>last</string></value></member>
           <member><name>version</name><value><string>Web Grid Viewer 1.0</string></value></member>
           <member><name>platform</name><value><string>web</string></value></member>
           <member><name>mac</name><value><string>00:00:00:00:00:00</string></value></member>
           <member><name>id0</name><value><string>00:00:00:00:00:00</string></value></member>
+          <member><name>channel</name><value><string>Web Grid Viewer</string></value></member>
+          <member><name>channel_version</name><value><string>1.0</string></value></member>
+          <member><name>client_digest</name><value><string>00000000-0000-0000-0000-000000000000</string></value></member>
+          <member><name>agree_to_tos</name><value><boolean>1</boolean></value></member>
         </struct>
       </value>
     </param>
