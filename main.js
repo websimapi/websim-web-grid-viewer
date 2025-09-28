@@ -1,3 +1,5 @@
+import { xmlrpc, XMLRPC_makeRequest } from './xmlrpc.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const loginView = document.getElementById('login-view');
@@ -245,147 +247,72 @@ document.addEventListener('DOMContentLoaded', () => {
         // Standard Second Life/OpenSim login hashing: MD5 hash prefixed with $1$
         const passwordHash = '$1$' + CryptoJS.MD5(password).toString();
         
-        // Use 'Resident' as the last name if the user left it blank, for maximum compatibility 
-        // with grids expecting a two-part name structure, while still supporting single-name logins.
+        // Use 'Resident' as the last name if the user left it blank for compatibility.
         const effectiveLastName = lastName || 'Resident';
-
-        // Escape input values for safe insertion into XML to prevent malformed XML (400 Bad Request)
-        const safeFirstName = escapeXml(firstName);
-        const safeEffectiveLastName = escapeXml(effectiveLastName);
         
         const agentName = lastName ? `${firstName} ${lastName}` : firstName;
         console.log(`Attempting login for ${agentName} to ${loginUrl} using effective last name: ${effectiveLastName}`);
 
-        // Updated XML-RPC payload with all required Second Life parameters
-        const xmlBody = `<?xml version="1.0"?>
-<methodCall>
-<methodName>login_to_simulator</methodName>
-<params>
-<param>
-<value>
-<struct>
-<member><name>firstname</name><value><string>${safeFirstName}</string></value></member>
-<member><name>lastname</name><value><string>${safeEffectiveLastName}</string></value></member>
-<member><name>passwd</name><value><string>${passwordHash}</string></value></member>
-<member><name>start</name><value><string>last</string></value></member>
-<member><name>version</name><value><string>Web Grid Viewer 1.0</string></value></member>
-<member><name>channel</name><value><string>Web Grid Viewer</string></value></member>
-<member><name>platform</name><value><string>web</string></value></member>
-<member><name>mac</name><value><string>00:00:00:00:00:00</string></value></member>
-<member><name>id0</name><value><string>web-client-${Date.now()}</string></value></member>
-<member><name>agree_to_tos</name><value><boolean>1</boolean></value></member>
-<member><name>read_critical</name><value><boolean>1</boolean></value></member>
-<member><name>options</name><value><array><data></data></array></value></member>
-</struct>
-</value>
-</param>
-</params>
-</methodCall>`;
+        // Construct the parameters as a JavaScript object for the XML-RPC library
+        const loginParams = {
+            firstname: firstName,
+            lastname: effectiveLastName,
+            passwd: passwordHash,
+            start: 'last',
+            version: 'Web Grid Viewer 1.0',
+            channel: 'Web Grid Viewer',
+            platform: 'web',
+            mac: '00:00:00:00:00:00',
+            id0: `web-client-${Date.now()}`,
+            agree_to_tos: true,
+            read_critical: true,
+            options: [], // Empty array for options
+        };
 
         const proxiedUrl = `${CORS_PROXY}${encodeURIComponent(loginUrl)}`;
-
-        const response = await fetch(proxiedUrl, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/xml'
-            },
-            body: xmlBody,
-        });
-
-        if (!response.ok) {
-            // Handles network/CORS proxy failure resulting in an bad HTTP status code (e.g., 5xx from proxy or 4xx)
-            throw new Error(`Connection error: Failed to reach the grid server (${response.status} ${response.statusText || 'Unknown Error'}). Please check the grid status indicator and URL.`);
-        }
-
-        const responseText = await response.text();
-
-        // Check for unexpected HTTP error responses returned in the body (e.g., a proxy error or server pre-XML parsing error)
-        if (responseText.includes('Status: 400 Bad Request') || responseText.includes('Unexpected error processing XML-RPC request')) {
-            const rawResponseSnippet = responseText.substring(0, 500).replace(/\s+/g, ' ').trim();
-            console.error('Login rejected with HTTP 400 Bad Request in response body:', rawResponseSnippet);
-            throw new Error(`Login rejected by the server with HTTP 400 Bad Request. This indicates a malformed XML payload (now fixed by escaping inputs) or a proxy/network failure. Raw Start: [${rawResponseSnippet}...]`);
-        }
         
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(responseText, "application/xml");
-        
-        // Check for XML-RPC fault structure (A common immediate failure response)
-        if (xmlDoc.getElementsByTagName('fault').length > 0) {
-            let faultString = xmlDoc.getElementsByTagName('faultString')[0]?.textContent;
-            
-            const rawResponseSnippet = responseText.substring(0, 500).replace(/\s+/g, ' ').trim();
+        try {
+            // Use the xmlrpc helper to perform the call
+            const responseData = await xmlrpc(proxiedUrl, 'login_to_simulator', [loginParams]);
 
-            console.error('XML-RPC Fault received:', { faultString });
-            // New: Include raw response in error message for better debugging
-            throw new Error(`Login failed (XML-RPC Fault): ${faultString || 'Unknown server fault.'} Raw Response Start: [${rawResponseSnippet}...]`);
-        }
+            // The library returns parsed JS objects. Check the login status.
+            if (responseData.login !== 'true') {
+                 const message = responseData.message?.trim();
+                 const reason = responseData.reason?.trim();
 
+                 console.error('Login Failed (Protocol Error):', responseData);
 
-        // Simple XML parsing helper
-        const getVal = (name) => {
-            const members = xmlDoc.getElementsByTagName('member');
-            for (const member of members) {
-                if (member.getElementsByTagName('name')[0]?.textContent === name) {
-                    const valueElement = member.getElementsByTagName('value')[0];
-                    if (valueElement) {
-                        // Standard XML-RPC dictates a single type element (e.g., <string>, <int>) inside <value>
-                        const typedElement = valueElement.firstElementChild;
-                        if (typedElement) {
-                            return typedElement.textContent;
-                        }
-                        // Fallback: If no typed element, grab text content of <value> itself (non-standard but robust for simple strings)
-                        return valueElement.textContent.trim();
-                    }
-                }
-            }
-            return null;
-        };
+                 let userMessage = 'Login failed.';
 
-        const loginStatusValue = getVal('login');
-
-        if (loginStatusValue !== 'true') {
-            const rawReason = getVal('reason');
-            const rawMessage = getVal('message');
-
-            const message = rawMessage?.trim();
-            const reason = rawReason?.trim();
-            
-            // Get a snippet of the raw response text for verbose debugging
-            const rawResponseSnippet = responseText.substring(0, 500).replace(/\s+/g, ' ').trim();
-
-
-            console.error('Login Failed (Protocol Error):', { reason, message, rawResponse: responseText });
-
-            let userMessage = 'Login failed.';
-
-            if (message) {
-                // Prioritize the human-readable message provided by the grid
-                userMessage = message;
-            } else if (reason) {
-                // If no message, use the reason code, cleaned up.
-                const displayReason = reason.replace(/_/g, ' ');
-                userMessage = `Login failed: ${displayReason}`;
-            } else {
-                // Fallback for unexpected failures where login is not true but no reason/message is provided
-                 // Provide a more actionable message focusing on common user errors (credentials/grid status).
-                 userMessage = 'Login failed. Please verify your username, password, and grid selection. If credentials are correct, the grid server may be experiencing issues.';
+                 if (message) {
+                     userMessage = message;
+                 } else if (reason) {
+                     const displayReason = reason.replace(/_/g, ' ');
+                     userMessage = `Login failed: ${displayReason}`;
+                 } else {
+                     userMessage = 'Login failed. Please verify your username, password, and grid selection. If credentials are correct, the grid server may be experiencing issues.';
+                 }
+                 throw new Error(userMessage);
             }
             
-            // Append verbose debugging information requested by the user
-            userMessage += ` [Protocol Status: ${loginStatusValue}. Raw Start: ${rawResponseSnippet}...]`;
-            
-            throw new Error(userMessage);
-        }
+            // Success! Return the relevant session information.
+            return {
+                agentId: responseData.agent_id,
+                sessionId: responseData.session_id,
+                secureSessionId: responseData.secure_session_id,
+                simIp: responseData.sim_ip,
+                simPort: responseData.sim_port,
+                regionX: responseData.region_x,
+                regionY: responseData.region_y,
+                // Spread other useful data from the response
+                ...responseData
+            };
 
-        return {
-            agentId: getVal('agent_id'),
-            sessionId: getVal('session_id'),
-            secureSessionId: getVal('secure_session_id'),
-            simIp: getVal('sim_ip'),
-            simPort: getVal('sim_port'),
-            regionX: getVal('region_x'),
-            regionY: getVal('region_y'),
-            // ... extract other useful data as needed
-        };
+        } catch (error) {
+            // Re-throw library errors or our custom protocol errors with more context.
+            console.error('An error occurred during login:', error);
+            // The error from xmlrpc library or our check above will be more informative.
+            throw new Error(error.message || 'An unknown login error occurred.');
+        }
     }
 });
