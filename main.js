@@ -140,8 +140,14 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionData.textContent = '';
     });
 
-    // --- Helper Functions ---
+    // --- Utility Functions ---
 
+    function escapeXml(unsafe) {
+        if (!unsafe) return '';
+        // Escape characters commonly causing XML parsing issues in HTTP payloads
+        return unsafe.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    
     function showError(message) {
         loginStatus.textContent = message;
         loginStatus.classList.add('error');
@@ -243,6 +249,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // with grids expecting a two-part name structure, while still supporting single-name logins.
         const effectiveLastName = lastName || 'Resident';
 
+        // Escape input values for safe insertion into XML to prevent malformed XML (400 Bad Request)
+        const safeFirstName = escapeXml(firstName);
+        const safeEffectiveLastName = escapeXml(effectiveLastName);
+        
         const agentName = lastName ? `${firstName} ${lastName}` : firstName;
         console.log(`Attempting login for ${agentName} to ${loginUrl} using effective last name: ${effectiveLastName}`);
 
@@ -255,8 +265,8 @@ document.addEventListener('DOMContentLoaded', () => {
     <param>
       <value>
         <struct>
-          <member><name>firstname</name><value><string>${firstName}</string></value></member>
-          <member><name>lastname</name><value><string>${effectiveLastName}</string></value></member>
+          <member><name>firstname</name><value><string>${safeFirstName}</string></value></member>
+          <member><name>lastname</name><value><string>${safeEffectiveLastName}</string></value></member>
           <member><name>passwd</name><value><string>${passwordHash}</string></value></member>
           <member><name>start</name><value><string>last</string></value></member>
           <member><name>version</name><value><string>Web Grid Viewer 1.0</string></value></member>
@@ -287,6 +297,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const responseText = await response.text();
+
+        // Check for unexpected HTTP error responses returned in the body (e.g., a proxy error or server pre-XML parsing error)
+        if (responseText.includes('Status: 400 Bad Request') || responseText.includes('Unexpected error processing XML-RPC request')) {
+            const rawResponseSnippet = responseText.substring(0, 500).replace(/\s+/g, ' ').trim();
+            console.error('Login rejected with HTTP 400 Bad Request in response body:', rawResponseSnippet);
+            throw new Error(`Login rejected by the server with HTTP 400 Bad Request. This indicates a malformed XML payload (now fixed by escaping inputs) or a proxy/network failure. Raw Start: [${rawResponseSnippet}...]`);
+        }
+        
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(responseText, "application/xml");
         
