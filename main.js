@@ -174,29 +174,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const rawReason = getVal('reason');
             const rawMessage = getVal('message');
 
-            const message = rawMessage?.trim() || 'Login failed.';
-            const reason = rawReason?.trim() || null;
+            const message = rawMessage?.trim();
+            const reason = rawReason?.trim();
 
             console.error('Login Failed:', { reason, message, rawResponse: responseText });
 
-            let userMessage = message;
+            let userMessage = 'Login failed.';
 
-            if (reason) {
-                // Sanitize reason for display (e.g., 'bad_password' -> 'bad password')
+            if (message) {
+                // Prioritize the human-readable message provided by the grid
+                userMessage = message;
+            } else if (reason) {
+                // If no message, use the reason code, cleaned up.
+                // e.g., 'bad_password' -> 'bad password'
                 const displayReason = reason.replace(/_/g, ' ');
-
-                // Check if the message already incorporates the reason/error type.
-                if (!message.toLowerCase().includes(reason.toLowerCase()) && !message.toLowerCase().includes(displayReason.toLowerCase())) {
-                    // If the provided message is generic, use the reason directly.
-                    if (message === 'Login failed.') {
-                        userMessage = `Login failed: ${displayReason}`;
-                    } else {
-                        // Otherwise, append the technical code/reason.
-                        userMessage += ` (Code: ${displayReason})`;
-                    }
-                }
+                userMessage = `Login failed: ${displayReason}`;
             }
             
+            // If the grid provides neither 'message' nor 'reason', userMessage remains 'Login failed.'
+
             throw new Error(userMessage);
         }
 
