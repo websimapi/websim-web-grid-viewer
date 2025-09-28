@@ -197,3 +197,25 @@ button:disabled {
     margin-bottom: 1rem;
 }
 
+#session-details {
+    margin-top: 2rem;
+    text-align: left;
+    background-color: rgba(0,0,0,0.2);
+    padding: 1rem;
+    border-radius: 6px;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+#session-details h4 {
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+
+#session-data {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.85rem;
+    color: var(--on-surface-light-color);
+    white-space: pre-wrap;
+    word-break: break-all;
+}

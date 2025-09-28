@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const customGridUrlInput = document.getElementById('custom-grid-url');
     const welcomeMessage = document.getElementById('welcome-message');
     const logoutButton = document.getElementById('logout-button');
+    const sessionDetails = document.getElementById('session-details');
+    const sessionData = document.getElementById('session-data');
 
     // --- Grid Info ---
     const GRIDS = {
@@ -71,8 +73,20 @@ document.addEventListener('DOMContentLoaded', () => {
             // On successful login
             loginView.classList.remove('active');
             appView.classList.add('active');
-            welcomeMessage.textContent = `Welcome, ${firstName} ${lastName}`;
+            welcomeMessage.textContent = `Welcome, ${sessionInfo.firstName} ${sessionInfo.lastName}`;
             
+            // Display session info to "prove" connection
+            sessionData.textContent = JSON.stringify({
+                agent_id: sessionInfo.agentId,
+                session_id: sessionInfo.sessionId,
+                secure_session_id: sessionInfo.secureSessionId,
+                sim_ip: sessionInfo.simIp,
+                sim_port: sessionInfo.simPort,
+                region_x: sessionInfo.regionX,
+                region_y: sessionInfo.regionY,
+            }, null, 2);
+            sessionDetails.classList.remove('hidden');
+
             // Reset login form
             loginForm.reset();
             customGridUrlContainer.classList.add('hidden');
@@ -92,6 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionInfo = {};
         appView.classList.remove('active');
         loginView.classList.add('active');
+        sessionDetails.classList.add('hidden');
+        sessionData.textContent = '';
     });
 
     // --- Helper Functions ---
@@ -157,14 +173,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (getVal('login') !== 'true') {
             const reason = getVal('reason') || 'Unknown reason';
             const message = getVal('message') || 'Login failed.';
-            console.error('Login Failed:', { reason, message, response: responseText });
-            throw new Error(message);
+            console.error('Login Failed:', { reason, message, rawResponse: responseText });
+
+            // Create a more informative error message for the user.
+            let userMessage = message;
+            if (reason !== 'Unknown reason' && !message.toLowerCase().includes(reason.toLowerCase())) {
+                userMessage += ` (Reason: ${reason})`;
+            }
+            throw new Error(userMessage);
         }
 
         return {
             agentId: getVal('agent_id'),
             sessionId: getVal('session_id'),
             secureSessionId: getVal('secure_session_id'),
+            simIp: getVal('sim_ip'),
+            simPort: getVal('sim_port'),
+            regionX: getVal('region_x'),
+            regionY: getVal('region_y'),
             // ... extract other useful data as needed
         };
     }
