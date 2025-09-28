@@ -188,6 +188,41 @@ button:disabled {
     color: var(--error-color);
 }
 
+/* Grid Status specific styling */
+#grid-status-container {
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+    color: var(--on-surface-light-color);
+    text-align: left;
+}
+
+.grid-status-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.status-online {
+    background-color: var(--primary-color); /* Neon green/cyan */
+}
+
+.status-offline, .status-unknown {
+    background-color: var(--error-color);
+}
+
+.status-checking {
+    background-color: #fdd835; /* Yellow/Amber */
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
 /* App View */
 #app-view {
     max-width: 1200px;

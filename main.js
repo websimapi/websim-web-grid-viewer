@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const passwordInput = document.getElementById('password');
     const togglePasswordButton = document.getElementById('toggle-password');
     
+    // New: Grid Status elements
+    const gridStatusContainer = document.getElementById('grid-status-container');
+    const currentGridStatusSpan = document.getElementById('current-grid-status');
+    
     const welcomeMessage = document.getElementById('welcome-message');
     const logoutButton = document.getElementById('logout-button');
     const sessionDetails = document.getElementById('session-details');
@@ -27,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- App State ---
     let sessionInfo = {};
+    let gridStatusCheckTimeout; // To debounce status checks
 
     // --- UI Event Listeners ---
 
@@ -47,7 +52,19 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             customGridUrlContainer.classList.add('hidden');
         }
+        updateGridStatus();
     });
+
+    // Custom URL input change
+    customGridUrlInput.addEventListener('input', () => {
+        // Debounce status check for custom URL input
+        clearTimeout(gridStatusCheckTimeout);
+        gridStatusCheckTimeout = setTimeout(updateGridStatus, 1000);
+    });
+    
+    // Initial status check
+    updateGridStatus();
+
 
     // Handle login form submission
     loginForm.addEventListener('submit', async (event) => {
@@ -111,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             loginButton.disabled = false;
             // The status message should persist on failure until the next attempt.
-            // Removed clearing logic that was hiding the error message immediately after failure.
         }
     });
 
@@ -131,6 +147,91 @@ document.addEventListener('DOMContentLoaded', () => {
         loginStatus.classList.add('error');
     }
 
+    // New: Grid status check functions
+
+    function getCurrentGridUrl() {
+        const grid = gridSelect.value;
+        if (grid === 'custom') {
+            return customGridUrlInput.value.trim();
+        }
+        return GRIDS[grid];
+    }
+
+    function updateGridStatus() {
+        const url = getCurrentGridUrl();
+        if (!url) {
+            currentGridStatusSpan.innerHTML = '<span class="grid-status-indicator status-unknown"></span> Grid URL missing';
+            return;
+        }
+
+        currentGridStatusSpan.innerHTML = '<span class="grid-status-indicator status-checking"></span> Checking status...';
+        
+        checkGridStatus(url)
+            .then(status => {
+                if (status === 'Online') {
+                    currentGridStatusSpan.innerHTML = '<span class="grid-status-indicator status-online"></span> Grid Online';
+                } else {
+                    currentGridStatusSpan.innerHTML = `<span class="grid-status-indicator status-offline"></span> Grid Offline/Unreachable`;
+                }
+            })
+            .catch(() => {
+                currentGridStatusSpan.innerHTML = '<span class="grid-status-indicator status-offline"></span> Grid Check Failed (Network Error)';
+            });
+    }
+
+    async function checkGridStatus(loginUrl) {
+        // Send a minimal XML-RPC request that is guaranteed to fail authentication 
+        // but verify network and endpoint responsiveness.
+        const minimalXmlBody = `<?xml version="1.0"?>
+<methodCall>
+  <methodName>login_to_simulator</methodName>
+  <params>
+    <param>
+      <value>
+        <struct>
+          <member><name>firstname</name><value><string>status_check</string></value></member>
+          <member><name>lastname</name><value><string>Resident</string></value></member>
+          <member><name>passwd</name><value><string>invalid</string></value></member>
+          <member><name>start</name><value><string>last</string></value></member>
+          <member><name>version</name><value><string>Status Checker</string></value></member>
+          <member><name>platform</name><value><string>web</string></value></member>
+        </struct>
+      </value>
+    </param>
+  </params>
+</methodCall>`;
+
+        const proxiedUrl = `${CORS_PROXY}${encodeURIComponent(loginUrl)}`;
+        
+        // Use AbortController for a short timeout (e.g., 5 seconds)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); 
+
+        try {
+            const response = await fetch(proxiedUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/xml' },
+                body: minimalXmlBody,
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            // If the server responds with a 2xx or 4xx status, it means the endpoint is reachable
+            // and processed the request (even if it rejected the payload).
+            if (response.ok || (response.status >= 400 && response.status < 500)) {
+                return 'Online';
+            } else {
+                return 'Offline';
+            }
+
+        } catch (error) {
+            clearTimeout(timeoutId);
+            return 'Offline';
+        }
+    }
+
+
     /**
      * Performs the XML-RPC login to a grid.
      */
@@ -138,6 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Standard Second Life/OpenSim login hashing: MD5 hash prefixed with $1$
         const passwordHash = '$1$' + CryptoJS.MD5(password).toString();
         
+        const agentName = lastName ? `${firstName} ${lastName}` : firstName;
+        console.log(`Attempting login for ${agentName} to ${loginUrl}`);
+
         // Note: Login logic verified to use standard XML-RPC login_to_simulator
         // endpoint structure, including mandatory parameters and handling optional last name.
         const xmlBody = `<?xml version="1.0"?>
@@ -170,12 +274,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (!response.ok) {
-            throw new Error(`Network error: ${response.status} ${response.statusText}`);
+            // Handles network/CORS proxy failure resulting in an bad HTTP status code (e.g., 5xx from proxy or 4xx)
+            throw new Error(`Connection error: Failed to reach the grid server (${response.status} ${response.statusText || 'Unknown Error'}). Please check the grid status indicator and URL.`);
         }
 
         const responseText = await response.text();
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(responseText, "application/xml");
+        
+        // Check for XML-RPC fault structure (A common immediate failure response)
+        if (xmlDoc.getElementsByTagName('fault').length > 0) {
+            let faultString = xmlDoc.getElementsByTagName('faultString')[0]?.textContent;
+            
+            console.error('XML-RPC Fault received:', { faultString });
+            throw new Error(`Login failed (XML-RPC Fault): ${faultString || 'Unknown server fault.'}`);
+        }
+
 
         // Simple XML parsing helper
         const getVal = (name) => {
@@ -195,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const message = rawMessage?.trim();
             const reason = rawReason?.trim();
 
-            console.error('Login Failed:', { reason, message, rawResponse: responseText });
+            console.error('Login Failed (Protocol Error):', { reason, message, rawResponse: responseText });
 
             let userMessage = 'Login failed.';
 
@@ -204,13 +318,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 userMessage = message;
             } else if (reason) {
                 // If no message, use the reason code, cleaned up.
-                // e.g., 'bad_password' -> 'bad password'
                 const displayReason = reason.replace(/_/g, ' ');
                 userMessage = `Login failed: ${displayReason}`;
+            } else {
+                // Fallback for unexpected failures where login is not true but no reason/message is provided
+                 userMessage = 'Login failed: The server rejected the request with no specific reason provided by the grid.';
             }
             
-            // If the grid provides neither 'message' nor 'reason', userMessage remains 'Login failed.'
-
             throw new Error(userMessage);
         }
 
