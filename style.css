@@ -106,6 +106,44 @@ input, select {
     font-size: 1rem;
 }
 
+/* New: Password container setup */
+.password-container {
+    position: relative;
+}
+
+/* Ensure password input has padding for the toggle button */
+#password {
+    padding-right: 3rem;
+}
+
+#toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+    transform: translateY(-50%);
+    /* Overrides general button style for a discreet icon */
+    background: none; 
+    border: none;
+    padding: 0.5rem;
+    width: auto;
+    height: auto;
+    font-size: 1.2rem;
+    color: var(--on-surface-light-color);
+    cursor: pointer;
+    transition: color 0.2s ease;
+    z-index: 10;
+    /* Ensure only the icon/text is visible, not the default button padding/background */
+    line-height: 1; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#toggle-password:hover {
+    color: var(--primary-color);
+    background: none; /* Ensure no background color on hover, unlike main buttons */
+}
+
 input:focus, select:focus {
     outline: none;
     border-color: var(--primary-color);

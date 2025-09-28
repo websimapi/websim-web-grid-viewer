@@ -8,6 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const gridSelect = document.getElementById('grid-select');
     const customGridUrlContainer = document.getElementById('custom-grid-url-container');
     const customGridUrlInput = document.getElementById('custom-grid-url');
+    
+    // Password visibility elements
+    const passwordInput = document.getElementById('password');
+    const togglePasswordButton = document.getElementById('toggle-password');
+    
     const welcomeMessage = document.getElementById('welcome-message');
     const logoutButton = document.getElementById('logout-button');
     const sessionDetails = document.getElementById('session-details');
@@ -24,6 +29,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let sessionInfo = {};
 
     // --- UI Event Listeners ---
+
+    // Toggle password visibility
+    togglePasswordButton.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        
+        // Change the icon/text based on state
+        togglePasswordButton.textContent = type === 'password' ? '👁️' : '🙈';
+        togglePasswordButton.setAttribute('aria-label', type === 'password' ? 'Show password' : 'Hide password');
+    });
 
     // Show/hide custom grid URL input based on selection
     gridSelect.addEventListener('change', () => {
@@ -120,7 +135,11 @@ document.addEventListener('DOMContentLoaded', () => {
      * Performs the XML-RPC login to a grid.
      */
     async function performLogin(firstName, lastName, password, loginUrl) {
+        // Standard Second Life/OpenSim login hashing: MD5 hash prefixed with $1$
         const passwordHash = '$1$' + CryptoJS.MD5(password).toString();
+        
+        // Note: Login logic verified to use standard XML-RPC login_to_simulator
+        // endpoint structure, including mandatory parameters and handling optional last name.
         const xmlBody = `<?xml version="1.0"?>
 <methodCall>
   <methodName>login_to_simulator</methodName>
