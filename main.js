@@ -95,9 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showError(error.message);
         } finally {
             loginButton.disabled = false;
-            if (!appView.classList.contains('active')) {
-                loginStatus.textContent = '';
-            }
+            // The status message should persist on failure until the next attempt.
+            // Removed clearing logic that was hiding the error message immediately after failure.
         }
     });
 
