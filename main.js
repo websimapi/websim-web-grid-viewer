@@ -43,9 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const password = document.getElementById('password').value;
         const grid = gridSelect.value;
 
-        // Basic validation
-        if (!firstName || !lastName || !password) {
-            showError('All fields are required.');
+        // Basic validation: only require firstName (or username) and password
+        if (!firstName || !password) {
+            showError('Username/First Name and Password are required.');
             return;
         }
 
