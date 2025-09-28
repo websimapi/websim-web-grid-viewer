@@ -256,54 +256,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const agentName = lastName ? `${firstName} ${lastName}` : firstName;
         console.log(`Attempting login for ${agentName} to ${loginUrl} using effective last name: ${effectiveLastName}`);
 
-        // Simplified XML-RPC payload with only essential parameters and proper formatting
-        const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+        // Updated XML-RPC payload with all required Second Life parameters
+        const xmlBody = `<?xml version="1.0"?>
 <methodCall>
-  <methodName>login_to_simulator</methodName>
-  <params>
-    <param>
-      <value>
-        <struct>
-          <member>
-            <name>firstname</name>
-            <value><string>${safeFirstName}</string></value>
-          </member>
-          <member>
-            <name>lastname</name>
-            <value><string>${safeEffectiveLastName}</string></value>
-          </member>
-          <member>
-            <name>passwd</name>
-            <value><string>${passwordHash}</string></value>
-          </member>
-          <member>
-            <name>start</name>
-            <value><string>last</string></value>
-          </member>
-          <member>
-            <name>version</name>
-            <value><string>Web Grid Viewer 1.0</string></value>
-          </member>
-          <member>
-            <name>platform</name>
-            <value><string>web</string></value>
-          </member>
-          <member>
-            <name>mac</name>
-            <value><string>00:00:00:00:00:00</string></value>
-          </member>
-          <member>
-            <name>id0</name>
-            <value><string>web-client</string></value>
-          </member>
-          <member>
-            <name>agree_to_tos</name>
-            <value><boolean>true</boolean></value>
-          </member>
-        </struct>
-      </value>
-    </param>
-  </params>
+<methodName>login_to_simulator</methodName>
+<params>
+<param>
+<value>
+<struct>
+<member><name>firstname</name><value><string>${safeFirstName}</string></value></member>
+<member><name>lastname</name><value><string>${safeEffectiveLastName}</string></value></member>
+<member><name>passwd</name><value><string>${passwordHash}</string></value></member>
+<member><name>start</name><value><string>last</string></value></member>
+<member><name>version</name><value><string>Web Grid Viewer 1.0</string></value></member>
+<member><name>channel</name><value><string>Web Grid Viewer</string></value></member>
+<member><name>platform</name><value><string>web</string></value></member>
+<member><name>mac</name><value><string>00:00:00:00:00:00</string></value></member>
+<member><name>id0</name><value><string>web-client-${Date.now()}</string></value></member>
+<member><name>agree_to_tos</name><value><boolean>1</boolean></value></member>
+<member><name>read_critical</name><value><boolean>1</boolean></value></member>
+<member><name>options</name><value><array><data></data></array></value></member>
+</struct>
+</value>
+</param>
+</params>
 </methodCall>`;
 
         const proxiedUrl = `${CORS_PROXY}${encodeURIComponent(loginUrl)}`;
@@ -311,8 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await fetch(proxiedUrl, {
             method: 'POST',
             headers: { 
-                'Content-Type': 'text/xml; charset=utf-8',
-                'User-Agent': 'Web Grid Viewer 1.0'
+                'Content-Type': 'application/xml'
             },
             body: xmlBody,
         });
